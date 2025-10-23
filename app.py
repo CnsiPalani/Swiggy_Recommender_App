@@ -1,34 +1,43 @@
+# app.py
 import streamlit as st
-from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
-import numpy as np
-from sklearn.preprocessing import OneHotEncoder
-import pickle
+from recommendation import recommend_restaurants
 
+def main():
+    st.set_page_config(page_title="Swiggy Restaurant Recommender", layout="wide")
+    st.title("🍽️ Swiggy Restaurant Recommendation System")
+    st.markdown("""
+        <style>
+        .main {background-color: #f8f9fa;}
+        .stButton>button {background-color: #ff914d; color: white;}
+        </style>
+    """, unsafe_allow_html=True)
 
-# Load cleaned and encoded data
-df = pd.read_csv("cleaned_data.csv")
-encoded_df = pd.read_csv("encoded_data.csv")
-with open("encoder.pkl", "rb") as f:
-    encoder = pickle.load(f)
+    st.sidebar.header("Filter Your Preferences")
+    
+    # Use text_input for all fields (no selectbox)
+    main_city = st.sidebar.text_input("City")
+    city = st.sidebar.text_input("Area Name")
+    cuisine = st.sidebar.text_input("Cuisine")
+    rating = st.sidebar.slider("Minimum Rating", 0.0, 5.0, 3.5)
+    cost = st.sidebar.number_input("Maximum Cost", min_value=0)
 
-# Streamlit UI
-st.title("Swiggy Restaurant Recommendation System")
+    
+    if st.button("Recommend", use_container_width=True):
+        with st.spinner("Finding the best restaurants for you..."):
+            user_input = {
+                'main_city': main_city,
+                'city': city,
+                'cuisine': cuisine,
+                'rating': rating,
+                'cost': cost
+            }
+            results = recommend_restaurants(user_input, 'encoded_data.csv', 'cleaned_data.csv', 'encoder.pkl')
+        if results is not None and not results.empty:
+            st.success("Here are your recommendations:")
+            st.dataframe(results.reset_index(drop=True).style.format({"cost": "₹{:.0f}", "rating": "{:.1f}"}))
+        else:
+            st.warning("No restaurants found matching your criteria. Please adjust your filters and try again.")
 
-city = st.selectbox("Select City", df['city'].unique())
-cuisine = st.selectbox("Select Cuisine", df['cuisine'].unique())
-rating = st.slider("Minimum Rating", 0.0, 5.0, 3.5)
-cost = st.slider("Maximum Cost", 100, 2000, 500)
-
-# Encode user input
-user_input = pd.DataFrame([[city, cuisine, 'dummy']], columns=['city', 'cuisine', 'name'])
-user_encoded = encoder.transform(user_input)
-user_vector = np.append(user_encoded[0], [rating, 0, cost])  # rating_count set to 0
-# Compute similarity
-similarity = cosine_similarity([user_vector], encoded_df.values)
-top_indices = similarity[0].argsort()[-5:][::-1]
-
-# Display recommendations
-st.subheader("Recommended Restaurants")
-recommendations = df.iloc[top_indices][['name', 'city', 'rating', 'cost', 'cuisine']]
-st.dataframe(recommendations)
+if __name__ == "__main__":
+    main()
