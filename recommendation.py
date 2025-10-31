@@ -3,19 +3,22 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 
+# Param (user_input, 'encoded_data.csv', 'cleaned_data.csv', 'encoder.pkl')
 def recommend_restaurants(user_input, encoded_path, cleaned_path, encoder_path, top_n=5):
     # Ensure numeric columns are loaded as numbers
     encoded_df = pd.read_csv(encoded_path, low_memory=False)
     cleaned_df = pd.read_csv(cleaned_path)
     # Filter both encoded and cleaned data by city and main_city
-    if 'city' in user_input and user_input['city']:
-        city_mask = cleaned_df['city'].str.lower() == user_input['city'].strip().lower()
-        cleaned_df = cleaned_df[city_mask]
-        encoded_df = encoded_df[city_mask]
     if 'main_city' in user_input and user_input['main_city']:
         main_city_mask = cleaned_df['main_city'].str.lower() == user_input['main_city'].strip().lower()
         cleaned_df = cleaned_df[main_city_mask]
         encoded_df = encoded_df[main_city_mask]
+
+    if 'city' in user_input and user_input['city']:
+        city_mask = cleaned_df['city'].str.lower() == user_input['city'].strip().lower()
+        cleaned_df = cleaned_df[city_mask]
+        encoded_df = encoded_df[city_mask]
+    
     for col in ['rating', 'rating_count', 'cost']:
         if col in encoded_df.columns:
             encoded_df[col] = pd.to_numeric(encoded_df[col], errors='coerce')
